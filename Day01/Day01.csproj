@@ -5,10 +5,11 @@
         <TargetFramework>net6.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <RootNamespace>AdventOfCode2021-Day01</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../Input/Input.csproj"/>
+        <ProjectReference Include="../Input/Input.csproj" />
     </ItemGroup>
 
 </Project>
