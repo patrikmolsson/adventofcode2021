@@ -19,36 +19,38 @@ void PartOne()
 {
     var linearFuelCalculation = new FuelCalculation(steps => steps);
 
-    var minFuelRequired = int.MaxValue;
-    for (var pos = minPos; pos <= maxPos; pos += 1)
-    {
-        minFuelRequired = MinFuelRequired(pos, minFuelRequired, linearFuelCalculation);
-    }
+    var minFuelRequired = MinFuelRequired(linearFuelCalculation);
 
     Console.WriteLine($"MinFuel: {minFuelRequired}");
 }
 
 void PartTwo()
 {
-    var exponentialCalculation = new FuelCalculation(steps => Enumerable.Range(1, steps).Sum());
+    var exponentialCalculation = new FuelCalculation(steps => steps * (1 + steps) / 2);
 
-    var minFuelRequired = int.MaxValue;
-    for (var pos = minPos; pos <= maxPos; pos += 1)
-    {
-        minFuelRequired = MinFuelRequired(pos, minFuelRequired, exponentialCalculation);
-    }
+    var minFuelRequired = MinFuelRequired(exponentialCalculation);
 
     Console.WriteLine($"MinFuel: {minFuelRequired}");
 }
 
-int MinFuelRequired(int pos, int previousMin, FuelCalculation fuelCalculation)
+int MinFuelRequired(FuelCalculation fuelCalculation)
+{
+    var minFuelRequired = int.MaxValue;
+
+    for (var pos = minPos; pos <= maxPos; pos += 1)
+    {
+        minFuelRequired = FuelForPos(pos, minFuelRequired, fuelCalculation);
+    }
+
+    return minFuelRequired;
+}
+
+int FuelForPos(int pos, int previousMin, FuelCalculation fuelCalculation)
 {
     var fuelForPos = 0;
 
-    foreach (var crab in crabs)
+    foreach (var steps in crabs.Select(crab => Math.Abs(crab - pos)))
     {
-        var steps = Math.Abs(crab - pos);
-
         fuelForPos += fuelCalculation(steps);
 
         if (fuelForPos >= previousMin)
