@@ -74,7 +74,7 @@ internal class Boat
 internal class BoatWithAim : Boat
 {
     private int Aim { get; set; }
-    
+
     protected override void ProcessInstruction(string direction, int amplitude)
     {
         switch (direction)

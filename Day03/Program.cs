@@ -13,7 +13,7 @@ PartTwo();
 
 void PartTwo()
 {
-    var bits = input.Select(s => 
+    var bits = input.Select(s =>
         s
             .ToCharArray()
             .Select(c => c == '1')
@@ -22,7 +22,7 @@ void PartTwo()
 
     var oxygenRating = GetIntFromBoolArray(FilterList(bits, 0, true));
     var co2Rating = GetIntFromBoolArray(FilterList(bits, 0, false));
-    
+
     Console.WriteLine(oxygenRating * co2Rating);
 }
 
@@ -35,7 +35,7 @@ bool[] FilterList(List<bool[]> inputList, int index, bool mostCommonCriteria)
 
     var countTrue = inputList.Count(s => s[index]);
     var countFalse = inputList.Count - countTrue;
-    
+
     var boolToKeep = mostCommonCriteria ? (countTrue >= countFalse) : countFalse > countTrue;
 
     var filtered = inputList.Where(i => i[index] == boolToKeep).ToList();
