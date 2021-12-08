@@ -59,12 +59,15 @@ internal class Decoding
 
         Debug.Assert(this.Digits.All(s => s.DeducedNumber != null));
 
-        var chars = this.CharSets.Select(set =>
-        {
-            var digit = this.Digits.Single(s => s.Input.Count == set.Count && !s.Input.Except(set).Any());
+        var chars = this.CharSets
+            .Select(set =>
+            {
+                var digit = this.Digits.Single(s => s.Input.Count == set.Count && !s.Input.Except(set).Any());
 
-            return digit.DeducedNumber ?? throw new InvalidOperationException("Character not set on digit!");
-        }).ToArray();
+                return digit.DeducedNumber ?? throw new InvalidOperationException("Character not set on digit!");
+            })
+            .Select(i => (char)(i + '0'))
+            .ToArray();
 
         return int.Parse(chars);
     }
@@ -75,16 +78,16 @@ internal class Decoding
 
         var one = this.GetDigitByValue(1);
         var six = sixCounts.Single(s => one.Input.Intersect(s.Input).Count() == 1);
-        six.DeducedNumber = '6';
+        six.DeducedNumber = 6;
 
         sixCounts = sixCounts.Except(new[] {six}).ToList();
 
         var four = this.GetDigitByValue(4);
         var nine = sixCounts.Single(s => !four.Input.Except(s.Input).Any());
-        nine.DeducedNumber = '9';
+        nine.DeducedNumber = 9;
 
         var zero = sixCounts.Except(new[] {nine}).Single();
-        zero.DeducedNumber = '0';
+        zero.DeducedNumber = 0;
     }
 
     private void DeduceFiveCounts()
@@ -93,32 +96,32 @@ internal class Decoding
 
         var seven = this.GetDigitByValue(7);
         var three = fiveCounts.Single(s => !seven.Input.Except(s.Input).Any());
-        three.DeducedNumber = '3';
+        three.DeducedNumber = 3;
 
         var four = this.GetDigitByValue(4);
         fiveCounts = fiveCounts.Except(new[] {three}).ToList();
         var five = fiveCounts.Single(s => s.Input.Intersect(four.Input).Count() == 3);
-        five.DeducedNumber = '5';
+        five.DeducedNumber = 5;
         var two = fiveCounts.Single(s => s.Input.Intersect(four.Input).Count() == 2);
-        two.DeducedNumber = '2';
+        two.DeducedNumber = 2;
     }
 
     private void DeduceSingleOccurenceDigits()
     {
-        this.Digits.Single(s => s.Input.Count == 2).DeducedNumber = '1';
-        this.Digits.Single(s => s.Input.Count == 3).DeducedNumber = '7';
-        this.Digits.Single(s => s.Input.Count == 4).DeducedNumber = '4';
-        this.Digits.Single(s => s.Input.Count == 7).DeducedNumber = '8';
+        this.Digits.Single(s => s.Input.Count == 2).DeducedNumber = 1;
+        this.Digits.Single(s => s.Input.Count == 3).DeducedNumber = 7;
+        this.Digits.Single(s => s.Input.Count == 4).DeducedNumber = 4;
+        this.Digits.Single(s => s.Input.Count == 7).DeducedNumber = 8;
     }
 
-    private Digit GetDigitByValue(int value) => this.Digits.Single(s => s.DeducedNumber == (char)(value + '0'));
+    private Digit GetDigitByValue(int value) => this.Digits.Single(s => s.DeducedNumber == value);
 }
 
 internal class Digit
 {
     public Digit(string input) => this.Input = input.ToCharArray().ToHashSet();
 
-    public char? DeducedNumber { get; set; }
+    public int? DeducedNumber { get; set; }
 
     public ISet<char> Input { get; }
 }
