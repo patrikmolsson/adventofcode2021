@@ -1,14 +1,12 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
 
-using System.Text;
+var input = File.ReadAllLines("14/input.txt");
+// var input = File.ReadAllLines("14/test.txt");
 
-// var input = File.ReadAllLines("14/input.txt");
-var input = File.ReadAllLines("14/test.txt");
-
-var polymer = input[0].ToCharArray();
 
 var instructions = new Dictionary<char, IDictionary<char, char>>();
+var topLevelPolymer = input[0].ToCharArray();
 
 foreach (var instruction in input[2..])
 {
@@ -19,108 +17,61 @@ foreach (var instruction in input[2..])
     instructions[parts[0]][parts[1]] = spl[1].ToCharArray().Single();
 }
 
+Console.WriteLine("Part ONE");
+Process(10);
 
-// for (var iteration = 1; iteration <= 10; iteration++)
-// {
-//     polymer = Process(polymer, instructions).ToArray();
-//
-//     Console.WriteLine(iteration);
-// }
-//
-// var counts = new Dictionary<char, long>();
-//
-// foreach (var c in polymer)
-// {
-//     counts.TryAdd(c, 0);
-//     counts[c] += 1;
-// }
-//
-//
-// var mostCommon = counts.MaxBy(s => s.Value);
-// var leastCommon = counts.MinBy(s => s.Value);
-//
-// Console.WriteLine($"Most common {mostCommon.Key}:{mostCommon.Value}");
-// Console.WriteLine($"Least common {leastCommon.Key}:{leastCommon.Value}");
-// Console.WriteLine($"Answer: {mostCommon.Value - leastCommon.Value}");
+Console.WriteLine("Part TWO");
+Process(40);
 
-var polymers = new List<Polymer>();
-
-for (var i = 1; i < polymer.Length; i++)
+void Process(int untilDepth)
 {
-    polymers.Add(new Polymer(polymer[i - 1], polymer[i], instructions, 0));
-}
+    var polymers = new List<Polymer>();
+    var cache = new Dictionary<CacheKey, IDictionary<char, long>>();
+    var counts = new Dictionary<char, long> { { topLevelPolymer[^1], 1 } };
 
-// var counts = new Dictionary<char, long>()
-// {
-//     {polymer[^1], 1}
-// };
-var counts = new Dictionary<char, long>()
-{
-};
-
-for (var i = 0; i <= 5; i++)
-{
-    Console.WriteLine($"Depth: {i}");
-    foreach (var (key, value) in polymers[0].CountsUntilDepth(i))
+    for (var i = 1; i < topLevelPolymer.Length; i++)
     {
-        Console.WriteLine($"\t: {key}:{(key == 'N' ? (value + 1).ToString() : value.ToString())}");
+        polymers.Add(new Polymer(topLevelPolymer[i - 1], topLevelPolymer[i], instructions, 0, cache));
     }
-}
-//
-// foreach (var polymer1 in polymers)
-// {
-//     foreach (var countsPolymer in polymer1.CountsUntilDepth(41))
-//     {
-//         if (counts.TryAdd(countsPolymer.Key, countsPolymer.Value))
-//         {
-//             continue;
-//         }
-//
-//         counts[countsPolymer.Key] += countsPolymer.Value;
-//     }
-//     Console.WriteLine("Processed polymer");
-// }
-//
-// Console.WriteLine(counts.Count);
-//
-// var maxCount = counts.Values.Max();
-// var minCount = counts.Values.Min();
-//
-// Console.WriteLine(maxCount - minCount);
-//
-//
 
-static IEnumerable<char> Process(IReadOnlyList<char> template, IDictionary<char, IDictionary<char,char>> instructions)
-{
-    yield return template[0];
-
-    for (var i = 1; i < template.Count; i++)
+    foreach (var polymer in polymers)
     {
-        var t1 = template[i - 1];
-        var t2 = template[i];
+        foreach (var (key, value) in polymer.CountsUntilDepth(untilDepth))
+        {
+            if (counts.TryAdd(key, value))
+            {
+                continue;
+            }
 
-        var newChar = instructions[t1][t2];
-
-        yield return newChar;
-        yield return t2;
+            counts[key] += value;
+        }
     }
+
+
+    var maxCount = counts.Values.Max();
+    var minCount = counts.Values.Min();
+
+    Console.WriteLine(maxCount - minCount);
 }
 
-record CacheKey(char PartOne, char PartTwo, int Depth);
+internal record CacheKey(char PartOne, char PartTwo, int Depth);
 
-class Polymer
+internal class Polymer
 {
+    private readonly IDictionary<CacheKey, IDictionary<char, long>> cache;
+    private readonly int depth;
+    private readonly IDictionary<char, IDictionary<char, char>> instructions;
     private readonly char partOne;
     private readonly char partTwo;
-    private readonly IDictionary<char, IDictionary<char, char>> instructions;
-    private readonly int depth;
 
-    public Polymer(char partOne, char partTwo, IDictionary<char, IDictionary<char, char>> instructions, int depth)
+    public Polymer(char partOne, char partTwo, IDictionary<char, IDictionary<char, char>> instructions, int depth,
+        IDictionary<CacheKey, IDictionary<char, long>> cache)
     {
         this.partOne = partOne;
         this.partTwo = partTwo;
         this.instructions = instructions;
         this.depth = depth;
+        this.cache = cache;
     }
 
 
@@ -128,7 +79,13 @@ class Polymer
     {
         if (maxDepth == this.depth)
         {
-            return new Dictionary<char, long>() {{this.partOne, 1}};
+            return new Dictionary<char, long> { { this.partOne, 1 } };
+        }
+
+        var cacheKey = new CacheKey(this.partOne, this.partTwo, this.depth);
+        if (this.cache.TryGetValue(cacheKey, out var prevCounts))
+        {
+            return prevCounts.ToDictionary(s => s.Key, s => s.Value);
         }
 
         var children = this.CraftPolymers().ToArray();
@@ -145,15 +102,16 @@ class Polymer
             counts[key] += value;
         }
 
+        this.cache[cacheKey] = counts.ToDictionary(s => s.Key, s => s.Value);
+
         return counts;
     }
 
     private IEnumerable<Polymer> CraftPolymers()
     {
         yield return new Polymer(this.partOne, this.instructions[this.partOne][this.partTwo], this.instructions,
-            this.depth + 1);
+            this.depth + 1, this.cache);
         yield return new Polymer(this.instructions[this.partOne][this.partTwo], this.partTwo, this.instructions,
-            this.depth + 1);
+            this.depth + 1, this.cache);
     }
-
 }
