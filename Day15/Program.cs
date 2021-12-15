@@ -1,72 +1,128 @@
-﻿// See https://aka.ms/new-console-template for more information
-
-
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
 // var input = File.ReadAllLines("15/test.txt");
 var input = File.ReadAllLines("15/input.txt");
-// var input = @"1163
-// // 1381
-// // 2136
-// // 3694".Split(Environment.NewLine, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
 
-var width = input.Length - 1;
-var end = new Coord(width, width);
-var board = new Dictionary<Coord, int>();
+var width = input.Length;
+var board = new Dictionary<Coord, Node>();
 
+var sorted = new SortedSet<Node>();
+for (var multiplierRow = 0; multiplierRow < 5; multiplierRow++)
+for (var multiplierCol = 0; multiplierCol < 5; multiplierCol++)
 for (var rowIndex = 0; rowIndex < input.Length; rowIndex++)
 {
     Debug.Assert(input.Length == input[rowIndex].Length, "Should have square");
     for (var colIndex = 0; colIndex < input[rowIndex].Length; colIndex++)
     {
-       board.Add(new Coord(rowIndex, colIndex), int.Parse(input[rowIndex][colIndex].ToString()));
+        var baseRisk = int.Parse(input[rowIndex][colIndex].ToString());
+
+        var newRisk = baseRisk + multiplierCol + multiplierRow;
+
+        if (newRisk > 9)
+        {
+            newRisk %= 9;
+        }
+
+        var newRow = rowIndex + (width * multiplierRow);
+        var newCol = colIndex + (width * multiplierCol);
+        var coord = new Coord(newRow, newCol);
+        var node = new Node(coord, newRow == 0 && newCol == 0 ? 0 : int.MaxValue, newRisk);
+        board[coord] = node;
+        sorted.Add(node);
     }
 }
 
-long currentMin = width * 2 * 10;
-var start = new Coord(0, 0);
-var minRisk = Neighbors(start)
-        .Where(n => board.ContainsKey(n))
-        .Min(n => MinRisk(n, 0, new HashSet<Coord>{ start}));
 
-Console.WriteLine("End");
+var endIndex = Convert.ToInt32(Math.Sqrt(board.Count)) - 1;
+var endCoord = new Coord(endIndex, endIndex);
+var end = board[endCoord];
+var start = board[new Coord(0, 0)];
+sorted.Add(start);
+
+do
+{
+    var current = sorted.First();
+    sorted.Remove(current);
+
+    var unvisitedNeighbors = current.Neighbors()
+        .Where(c => board.ContainsKey(c))
+        .Where(c => !board[c].Visited);
+
+    foreach (var neighborCoord in unvisitedNeighbors)
+    {
+        var neighbor = board[neighborCoord];
+
+        sorted.Remove(neighbor);
+
+        neighbor.TentativeTotalRisk = Math.Min(neighbor.TentativeTotalRisk, current.TentativeTotalRisk + neighbor.Risk);
+
+        sorted.Add(neighbor);
+    }
+
+    current.Visited = true;
+
+    if (current == end)
+    {
+        break;
+    }
+} while (sorted.Any());
+
+
+var minRisk = end.TentativeTotalRisk;
+
 Console.WriteLine(minRisk);
 
-long MinRisk(Coord currentCoord, long currentRisk, ISet<Coord> visitedCoords)
+internal record Coord(int Row, int Col);
+
+internal class Node : IComparable<Node>
 {
-    visitedCoords.Add(currentCoord);
-    currentRisk += board[currentCoord];
-
-    if (currentCoord == end)
+    public Node(Coord coord, int tentativeTotalRisk, int risk)
     {
-        currentMin = Math.Min(currentRisk, currentMin);
-        return currentRisk;
+        this.Coord = coord;
+        this.TentativeTotalRisk = tentativeTotalRisk;
+        this.Risk = risk;
     }
 
-    if (currentRisk >= currentMin)
+    private Coord Coord { get; }
+
+    public int TentativeTotalRisk { get; set; }
+
+    public bool Visited { get; set; }
+
+    public int Risk { get; }
+
+    public IEnumerable<Coord> Neighbors()
     {
-        return long.MaxValue;
+        yield return this.Coord with {Col = this.Coord.Col + 1};
+        yield return this.Coord with {Col = this.Coord.Col - 1};
+        yield return this.Coord with {Row = this.Coord.Row - 1};
+        yield return this.Coord with {Row = this.Coord.Row + 1};
     }
 
-    var neighborsToScan = Neighbors(currentCoord)
-        .Where(n => !visitedCoords.Contains(n))
-        .Where(n => board.ContainsKey(n))
-        .ToList();
-
-    if (!neighborsToScan.Any())
+    public int CompareTo(Node? other)
     {
-        return long.MaxValue;
-    }
+        if (ReferenceEquals(this, other))
+        {
+            return 0;
+        }
 
-    return neighborsToScan.Min(n => MinRisk(n, currentRisk, new HashSet<Coord>(visitedCoords)));
+        if (ReferenceEquals(null, other))
+        {
+            return 1;
+        }
+
+        var s = this.TentativeTotalRisk.CompareTo(other.TentativeTotalRisk);
+        if (s != 0)
+        {
+            return s;
+        }
+
+        var c = this.Coord.Col.CompareTo(other.Coord.Col);
+        if (c != 0)
+        {
+            return c;
+        }
+
+        return this.Coord.Row.CompareTo(other.Coord.Row);
+    }
 }
-
-IEnumerable<Coord> Neighbors(Coord currentCoord)
-{
-    yield return currentCoord with {Col = currentCoord.Col + 1};
-    yield return currentCoord with {Col = currentCoord.Col - 1};
-    yield return currentCoord with {Row = currentCoord.Row - 1};
-    yield return currentCoord with {Row = currentCoord.Row + 1};
-}
-
-record Coord(int Row, int Col);
